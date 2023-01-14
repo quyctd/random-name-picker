@@ -11,9 +11,16 @@ import SoundEffects from '@js/SoundEffects';
   const settingsContent = document.getElementById('settings-panel') as HTMLDivElement | null;
   const settingsSaveButton = document.getElementById('settings-save') as HTMLButtonElement | null;
   const settingsCloseButton = document.getElementById('settings-close') as HTMLButtonElement | null;
+  const historyButton = document.getElementById('history-button') as HTMLButtonElement | null;
+  const historyWrapper = document.getElementById('history') as HTMLDivElement | null;
+  const historyContent = document.getElementById('history-panel') as HTMLDivElement | null;
+  const historyCloseButton = document.getElementById('history-close') as HTMLButtonElement | null;
+  const historyListTextArea = document.getElementById('history-list') as HTMLTextAreaElement | null;
   const sunburstSvg = document.getElementById('sunburst') as HTMLImageElement | null;
   const confettiCanvas = document.getElementById('confetti-canvas') as HTMLCanvasElement | null;
   const nameListTextArea = document.getElementById('name-list') as HTMLTextAreaElement | null;
+  const luckyMoneyListTextArea = document.getElementById('lucky-money-list') as HTMLTextAreaElement | null;
+  const currentPlayerElement = document.getElementById('current-player') as HTMLSpanElement | null;
   const removeNameFromListCheckbox = document.getElementById('remove-from-list') as HTMLInputElement | null;
   const enableSoundCheckbox = document.getElementById('enable-sound') as HTMLInputElement | null;
 
@@ -26,9 +33,16 @@ import SoundEffects from '@js/SoundEffects';
     && settingsContent
     && settingsSaveButton
     && settingsCloseButton
+    && historyButton
+    && historyWrapper
+    && historyContent
+    && historyCloseButton
+    && historyListTextArea
     && sunburstSvg
     && confettiCanvas
     && nameListTextArea
+    && luckyMoneyListTextArea
+    && currentPlayerElement
     && removeNameFromListCheckbox
     && enableSoundCheckbox
   )) {
@@ -106,6 +120,7 @@ import SoundEffects from '@js/SoundEffects';
   /** To open the setting page */
   const onSettingsOpen = () => {
     nameListTextArea.value = slot.names.length ? slot.names.join('\n') : '';
+    luckyMoneyListTextArea.value = slot.luckyMoneys.length ? slot.luckyMoneys.join('\n') : '';
     removeNameFromListCheckbox.checked = slot.shouldRemoveWinnerFromNameList;
     enableSoundCheckbox.checked = !soundEffects.mute;
     settingsWrapper.style.display = 'block';
@@ -117,13 +132,37 @@ import SoundEffects from '@js/SoundEffects';
     settingsWrapper.style.display = 'none';
   };
 
+  /** To open the history page */
+  const onHistoryOpen = () => {
+    // Display from the latest draw
+    historyListTextArea.value = slot.drawHistories.slice().reverse().join('\n');
+    historyWrapper.style.display = 'block';
+  };
+
+  /** To close the history page */
+  const onHistoryClose = () => {
+    historyContent.scrollTop = 0;
+    historyWrapper.style.display = 'none';
+  };
+
   // Click handler for "Draw" button
-  drawButton.addEventListener('click', () => {
+  drawButton.addEventListener('click', async () => {
     if (!slot.names.length) {
       onSettingsOpen();
       return;
     }
 
+    // await slot.beforeSpin(); // Update the current player name
+    // // Random between slot.names before actually render the current player
+    // for (let i = 0; i < slot.names.length * 6; i += 1) {
+    //   currentPlayerElement.textContent =
+    // `Selecting... ${slot.names[Math.floor(Math.random() * slot.names.length)]}`;
+    //   // Slow down the animation each time
+    //   await new Promise((resolve) => setTimeout(resolve, 20 * (i + 1)));
+    // }
+    // currentPlayerElement.textContent = `⭐️ ${slot.currentPlayerName} ⭐️`;
+
+    // soundEffects.spin((MAX_REEL_ITEMS - 1) / 10);
     slot.spin();
   });
 
@@ -149,10 +188,16 @@ import SoundEffects from '@js/SoundEffects';
   // Click handler for "Settings" button
   settingsButton.addEventListener('click', onSettingsOpen);
 
+  // Click handler for "History" button
+  historyButton.addEventListener('click', onHistoryOpen);
+
   // Click handler for "Save" button for setting page
   settingsSaveButton.addEventListener('click', () => {
     slot.names = nameListTextArea.value
       ? nameListTextArea.value.split(/\n/).filter((name) => Boolean(name.trim()))
+      : [];
+    slot.luckyMoneys = luckyMoneyListTextArea.value
+      ? luckyMoneyListTextArea.value.split(/\n/).filter((luckyMoney) => Boolean(luckyMoney.trim()))
       : [];
     slot.shouldRemoveWinnerFromNameList = removeNameFromListCheckbox.checked;
     soundEffects.mute = !enableSoundCheckbox.checked;
@@ -161,4 +206,7 @@ import SoundEffects from '@js/SoundEffects';
 
   // Click handler for "Discard and close" button for setting page
   settingsCloseButton.addEventListener('click', onSettingsClose);
+
+  // Click handler for "Close" button for history page
+  historyCloseButton.addEventListener('click', onHistoryClose);
 })();

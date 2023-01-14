@@ -101,6 +101,27 @@
     /* enable gpu accelaration to fix iOS flicker issue */
     transform: translate3d(0, 0, 0);
   }
+
+  > p {
+    font-size: 2rem;
+    font-weight: bold;
+    text-align: center;
+    color: white;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    /* enable gpu accelaration to fix iOS flicker issue */
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+#name-reel {
+  overflow: hidden;
+  max-height: 88px;
+}
+
+#current-player {
+  animation: fadeIn 2s ease-in-out;
 }
 
 #draw-button {
@@ -172,6 +193,12 @@
 
   #settings-save,
   #settings-close {
+    margin: 1.875rem 0 0 0;
+    display: block;
+    width: 100%;
+  }
+
+  #history-close {
     margin: 1.875rem 0 0 0;
     display: block;
     width: 100%;

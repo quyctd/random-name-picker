@@ -19,6 +19,15 @@ export default class Slot {
   /** List of names to draw from */
   private nameList: string[];
 
+  /** Current player */
+  private currentPlayer: string;
+
+  /** List of lucky money to draw from */
+  private luckyMoneyList: string[];
+
+  /** List of draw history */
+  private drawHistory: string[];
+
   /** Whether there is a previous winner element displayed in reel */
   private havePreviousWinner: boolean;
 
@@ -62,6 +71,9 @@ export default class Slot {
     }: SlotConfigurations
   ) {
     this.nameList = [];
+    this.currentPlayer = '';
+    this.luckyMoneyList = [];
+    this.drawHistory = [];
     this.havePreviousWinner = false;
     this.reelContainer = document.querySelector(reelContainerSelector);
     this.maxReelItems = maxReelItems;
@@ -116,6 +128,36 @@ export default class Slot {
     return this.nameList;
   }
 
+  /** Setter for current player */
+  set currentPlayerName(name: string) {
+    this.currentPlayer = name;
+  }
+
+  /** Getter for current player */
+  get currentPlayerName(): string {
+    return this.currentPlayer;
+  }
+
+  /** Setter for lucky moneys list */
+  set luckyMoneys(luckyMoneys: string[]) {
+    this.luckyMoneyList = luckyMoneys;
+  }
+
+  /** Getter for lucky moneys list */
+  get luckyMoneys(): string[] {
+    return this.luckyMoneyList;
+  }
+
+  /** Setter for history list */
+  set drawHistories(histories: string[]) {
+    this.drawHistory = histories;
+  }
+
+  /** Getter for history list */
+  get drawHistories(): string[] {
+    return this.drawHistory;
+  }
+
   /**
    * Setter for shouldRemoveWinner
    * @param removeWinner  Whether the winner should be removed from name list
@@ -152,10 +194,28 @@ export default class Slot {
   }
 
   /**
-   * Function for spinning the slot
-   * @returns Whether the spin is completed successfully
+   * Returns a new array where the items are shuffled
+   * @template T  Type of items inside the array to be shuffled
+   * @param array  The array to be shuffled
+   * @returns The shuffled array
    */
-  public async spin(): Promise<boolean> {
+  private static shuffleLuckyMoneys<T = unknown>(array: T[]): T[] {
+    const keys = Object.keys(array) as unknown[] as number[];
+    const result: T[] = [];
+    for (let k = 0, n = keys.length; k < array.length && n > 0; k += 1) {
+      // eslint-disable-next-line no-bitwise
+      const i = Math.random() * n | 0;
+      const key = keys[i];
+      result.push(array[key]);
+      n -= 1;
+      const tmp = keys[n];
+      keys[n] = key;
+      keys[i] = tmp;
+    }
+    return result;
+  }
+
+  public async beforeSpin(): Promise<boolean> {
     if (!this.nameList.length) {
       console.error('Name List is empty. Cannot start spinning.');
       return false;
@@ -165,8 +225,25 @@ export default class Slot {
       this.onSpinStart();
     }
 
-    const { reelContainer, reelAnimation, shouldRemoveWinner } = this;
-    if (!reelContainer || !reelAnimation) {
+    // Shuffle names and create reel items
+    let randomNames = Slot.shuffleNames<string>(this.nameList);
+
+    while (randomNames.length && randomNames.length < this.maxReelItems) {
+      randomNames = [...randomNames, ...randomNames];
+    }
+
+    randomNames = randomNames.slice(0, this.maxReelItems - Number(this.havePreviousWinner));
+
+    const playerName = randomNames[randomNames.length - 1];
+
+    // Update current player
+    this.currentPlayer = playerName;
+    return true;
+  }
+
+  public async spinName(): Promise<boolean> {
+    if (!this.nameList.length) {
+      console.error('Name List is empty. Cannot start spinning.');
       return false;
     }
 
@@ -179,27 +256,90 @@ export default class Slot {
 
     randomNames = randomNames.slice(0, this.maxReelItems - Number(this.havePreviousWinner));
 
+    const playerName = randomNames[randomNames.length - 1];
+
+    // Update current player
+    this.currentPlayer = playerName;
+
+    const currentPlayerElement = document.getElementById('current-player') as HTMLElement;
+    // Random between slot.names before actually render the current player
+    for (let i = 0; i < this.names.length * 6; i += 1) {
+      currentPlayerElement.textContent = `Selecting... ${this.names[Math.floor(Math.random() * this.names.length)]}`;
+      // Slow down the animation each time
+      // eslint-disable-next-line no-await-in-loop, no-promise-executor-return
+      await new Promise((resolve) => setTimeout(resolve, 20 * (i + 1)));
+    }
+    currentPlayerElement.textContent = `⭐️ ${playerName} ⭐️`;
+
+    return true;
+  }
+
+  /**
+   * Function for spinning the slot
+   * @returns Whether the spin is completed successfully
+   */
+  public async spin(): Promise<boolean> {
+    if (!this.nameList.length && !this.luckyMoneyList.length) {
+      console.error('Name List and Lucky Money List is empty. Cannot start spinning.');
+      return false;
+    }
+
+    if (this.onSpinStart) {
+      this.onSpinStart();
+    }
+
+    await this.spinName();
+
+    const { reelContainer, reelAnimation, shouldRemoveWinner } = this;
+    if (!reelContainer || !reelAnimation) {
+      return false;
+    }
+
+    // Shuffle lucky moneys
+    let randomLuckyMoneys = Slot.shuffleLuckyMoneys<string>(this.luckyMoneyList);
+    while (randomLuckyMoneys.length && randomLuckyMoneys.length < this.maxReelItems) {
+      randomLuckyMoneys = [...randomLuckyMoneys, ...randomLuckyMoneys];
+    }
+
+    randomLuckyMoneys = randomLuckyMoneys.slice(
+      0,
+      this.maxReelItems - Number(this.havePreviousWinner)
+    );
+
+    const playerLuckyMoney = randomLuckyMoneys[randomLuckyMoneys.length - 1];
+
     const fragment = document.createDocumentFragment();
 
-    randomNames.forEach((name) => {
+    randomLuckyMoneys.forEach((luckyMoney) => {
       const newReelItem = document.createElement('div');
-      newReelItem.innerHTML = name;
+      newReelItem.innerHTML = luckyMoney;
       fragment.appendChild(newReelItem);
     });
 
     reelContainer.appendChild(fragment);
 
-    console.log('Displayed items: ', randomNames);
-    console.log('Winner: ', randomNames[randomNames.length - 1]);
+    console.log('Displayed items: ', randomLuckyMoneys);
+    console.log('Result: ', this.currentPlayer, playerLuckyMoney);
 
     // Remove winner form name list if necessary
     if (shouldRemoveWinner) {
       this.nameList.splice(this.nameList.findIndex(
-        (name) => name === randomNames[randomNames.length - 1]
+        (name) => name === this.currentPlayer
       ), 1);
+      this.luckyMoneyList.splice(this.luckyMoneyList.findIndex(
+        (luckyMoney) => luckyMoney === playerLuckyMoney
+      ), 1);
+
+      // Update history
+      this.drawHistory.push(`${this.currentPlayer} - ${playerLuckyMoney}`);
+      // Add history breakpoint if all players have been drawn
+      if (!this.nameList.length && !this.luckyMoneyList.length) {
+        this.drawHistory.push('-------END-------');
+      }
     }
 
-    console.log('Remaining: ', this.nameList);
+    console.log('Remaining players: ', this.nameList);
+    console.log('Remaining lucky money: ', this.luckyMoneyList);
 
     // Play the spin animation
     const animationPromise = new Promise((resolve) => {
