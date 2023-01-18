@@ -1,3 +1,4 @@
+/* eslint-disable no-promise-executor-return */
 import confetti from 'canvas-confetti';
 import Slot from '@js/Slot';
 import SoundEffects from '@js/SoundEffects';
@@ -99,6 +100,22 @@ import SoundEffects from '@js/SoundEffects';
     soundEffects.spin((MAX_REEL_ITEMS - 1) / 10);
   };
 
+  /**  Function to be trigger before spinning name */
+  const onSpinNameStart = () => {
+    stopWinningAnimation();
+    drawButton.disabled = true;
+    settingsButton.disabled = true;
+    soundEffects.spinName(10000); // a very long time so we can stop it manually
+  };
+
+  /**  Function to be trigger after spinning name */
+  const onSpinNameEnd = async () => {
+    soundEffects.stop();
+    soundEffects.spinNameSuccess(1);
+    // sleep 1s
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  };
+
   /**  Functions to be trigger after spinning */
   const onSpinEnd = async () => {
     confettiAnimation();
@@ -114,6 +131,8 @@ import SoundEffects from '@js/SoundEffects';
     maxReelItems: MAX_REEL_ITEMS,
     onSpinStart,
     onSpinEnd,
+    onSpinNameStart,
+    onSpinNameEnd,
     onNameListChanged: stopWinningAnimation
   });
 

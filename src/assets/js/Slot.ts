@@ -1,3 +1,4 @@
+/* eslint-disable no-promise-executor-return */
 interface SlotConfigurations {
   /** User configuration for maximum item inside a reel */
   maxReelItems?: number;
@@ -9,6 +10,11 @@ interface SlotConfigurations {
   onSpinStart?: () => void;
   /** User configuration for callback function that runs after spinning reel */
   onSpinEnd?: () => void;
+
+  /** User configuration for callback function that runs before spinning name */
+  onSpinNameStart?: () => void;
+  /** User configuration for callback function that runs after spinning name */
+  onSpinNameEnd?: () => void;
 
   /** User configuration for callback function that runs after user updates the name list */
   onNameListChanged?: () => void;
@@ -49,6 +55,12 @@ export default class Slot {
   /** Callback function that runs after spinning reel */
   private onSpinEnd?: NonNullable<SlotConfigurations['onSpinEnd']>;
 
+  /** Callback function that runs before spinning name reel */
+  private onSpinNameStart?: NonNullable<SlotConfigurations['onSpinNameStart']>;
+
+  /** Callback function that runs after spinning name reel */
+  private onSpinNameEnd?: NonNullable<SlotConfigurations['onSpinNameEnd']>;
+
   /** Callback function that runs after spinning reel */
   private onNameListChanged?: NonNullable<SlotConfigurations['onNameListChanged']>;
 
@@ -67,6 +79,8 @@ export default class Slot {
       reelContainerSelector,
       onSpinStart,
       onSpinEnd,
+      onSpinNameStart,
+      onSpinNameEnd,
       onNameListChanged
     }: SlotConfigurations
   ) {
@@ -80,6 +94,8 @@ export default class Slot {
     this.shouldRemoveWinner = removeWinner;
     this.onSpinStart = onSpinStart;
     this.onSpinEnd = onSpinEnd;
+    this.onSpinNameStart = onSpinNameStart;
+    this.onSpinNameEnd = onSpinNameEnd;
     this.onNameListChanged = onNameListChanged;
 
     // Create reel animation
@@ -247,6 +263,10 @@ export default class Slot {
       return false;
     }
 
+    if (this.onSpinNameStart) {
+      this.onSpinNameStart();
+    }
+
     // Shuffle names and create reel items
     let randomNames = Slot.shuffleNames<string>(this.nameList);
 
@@ -266,10 +286,20 @@ export default class Slot {
     for (let i = 0; i < this.names.length * 6; i += 1) {
       currentPlayerElement.textContent = `Selecting... ${this.names[Math.floor(Math.random() * this.names.length)]}`;
       // Slow down the animation each time
-      // eslint-disable-next-line no-await-in-loop, no-promise-executor-return
+      // eslint-disable-next-line no-await-in-loop
       await new Promise((resolve) => setTimeout(resolve, 20 * (i + 1)));
     }
+    // sleep 1s for user to see the result
+
+    currentPlayerElement.textContent = 'Player selected...';
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     currentPlayerElement.textContent = `⭐️ ${playerName} ⭐️`;
+
+    if (this.onSpinNameEnd) {
+      await this.onSpinNameEnd();
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     return true;
   }
@@ -284,11 +314,11 @@ export default class Slot {
       return false;
     }
 
+    await this.spinName();
+
     if (this.onSpinStart) {
       this.onSpinStart();
     }
-
-    await this.spinName();
 
     const { reelContainer, reelAnimation, shouldRemoveWinner } = this;
     if (!reelContainer || !reelAnimation) {

@@ -112,6 +112,17 @@ export default class SoundEffects {
     });
   }
 
+  // Stop all sound effect
+  public stop(): void {
+    const { audioContext } = this;
+
+    if (audioContext) {
+      // Remove all sound effects
+      audioContext.close();
+      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  }
+
   /**
    * Play spinning sound effect for N seconds
    * @param durationInSecond  Duration of sound effect in seconds
@@ -134,6 +145,66 @@ export default class SoundEffects {
     const duration = Math.floor(durationInSecond * 10);
     this.playSound(
       Array.from(Array(duration), (_, index) => musicNotes[index % 3]),
+      { type: 'triangle', easeOut: false, volume: 2 }
+    );
+
+    return new Promise<boolean>((resolve) => {
+      setTimeout(() => {
+        resolve(true);
+      }, totalDuration * 1000);
+    });
+  }
+
+  /**
+   * Play spinning sound effect for N seconds
+   * @param durationInSecond  Duration of sound effect in seconds
+   * @returns Has sound effect been played
+   */
+  public spinName(durationInSecond: number): Promise<boolean> {
+    if (this.isMuted) {
+      return Promise.resolve(false);
+    }
+
+    const musicNotes: SoundSeries[] = [
+      { key: 'D#3', duration: 0.2 },
+      { key: 'C#3', duration: 0.2 },
+      { key: 'C3', duration: 0.2 }
+    ];
+
+    const totalDuration = musicNotes
+      .reduce((currentNoteTime, { duration }) => currentNoteTime + duration, 0);
+
+    const duration = Math.floor(durationInSecond * 10);
+    this.playSound(
+      Array.from(Array(duration), (_, index) => musicNotes[index % 3]),
+      { type: 'triangle', easeOut: false, volume: 2 }
+    );
+
+    return new Promise<boolean>((resolve) => {
+      setTimeout(() => {
+        resolve(true);
+      }, totalDuration * 1000);
+    });
+  }
+
+  public spinNameSuccess(durationInSecond: number): Promise<boolean> {
+    if (this.isMuted) {
+      return Promise.resolve(false);
+    }
+
+    // A ting-ting sound for finishing the name spinning
+    const musicNotes: SoundSeries[] = [
+      { key: 'D#4', duration: 0.1 },
+      { key: 'C#4', duration: 0.1 }
+    ];
+
+    const totalDuration = musicNotes
+      .reduce((currentNoteTime, { duration }) => currentNoteTime + duration, 0);
+
+    const duration = Math.floor(durationInSecond * 10);
+
+    this.playSound(
+      Array.from(Array(duration), (_, index) => musicNotes[index % 2]),
       { type: 'triangle', easeOut: false, volume: 2 }
     );
 
